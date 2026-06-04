@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>hikvision-isapi browser example</title>
+</head>
+<body>
+  <p>Open the browser console to see device info.</p>
+
+  <script src="https://unpkg.com/hikvision-isapi/dist/hikvision-isapi.umd.min.js"></script>
+  <script>
+    const client = new Hikvision.HikvisionClient({
+      host: 'http://192.168.1.64', username: 'admin', password: 'pass',
+    });
+    client.device.getInfo().then(console.log).catch(console.error);
+    // NOTE: the device must send permissive CORS headers or the browser blocks this.
+  </script>
+</body>
+</html>
