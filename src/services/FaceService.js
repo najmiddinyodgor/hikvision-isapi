@@ -9,19 +9,19 @@ export class FaceService {
     const dto = Face({ employeeNo, imageBase64, faceLibId });
     return this.http.request('POST', `/ISAPI/Intelligent/FDLib/FDSetUp?format=json&FDID=${faceLibId}&faceLibType=blackFD`, { ...JSON_FMT, body: dto.toISAPI() });
   }
-  async search({ employeeNo, faceLibId = '1', position = 0, maxResults = 30 } = {}) {
+  async search({ employeeNo, faceLibId = '1', faceLibType = 'blackFD', position = 0, maxResults = 30 } = {}) {
+    // FDSearch wants a flat body (no FDSearchCond wrapper) and FPID as a plain
+    // string; the wrapped/array forms are rejected 400 "node does not exist".
     const body = {
-      FDSearchCond: {
-        searchID: String(Date.now()),
-        searchResultPosition: position,
-        maxResults,
-        FDID: String(faceLibId),
-        faceLibType: 'blackFD',
-        ...(employeeNo ? { FPID: [{ value: String(employeeNo) }] } : {}),
-      },
+      searchID: String(Date.now()),
+      searchResultPosition: position,
+      maxResults,
+      FDID: String(faceLibId),
+      faceLibType,
+      ...(employeeNo ? { FPID: String(employeeNo) } : {}),
     };
     const r = await this.http.request('POST', '/ISAPI/Intelligent/FDLib/FDSearch?format=json', { ...JSON_FMT, body });
-    const list = r.FDSearch && r.FDSearch.MatchList;
+    const list = r.MatchList;
     if (!list) return [];
     return Array.isArray(list) ? list : [list];
   }
