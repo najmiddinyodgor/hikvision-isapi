@@ -24,4 +24,8 @@ describe('deserialize', () => {
   it('falls back to text when unknown', () => {
     expect(deserialize('hello', 'text/plain')).toBe('hello');
   });
+  it('trusts the body shape when firmware mislabels XML as json', () => {
+    const out = deserialize('<DeviceInfo><model>DS-K1T343MWX</model></DeviceInfo>', 'application/json');
+    expect(out.DeviceInfo.model).toBe('DS-K1T343MWX');
+  });
 });

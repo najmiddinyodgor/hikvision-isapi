@@ -54,6 +54,24 @@ describe('HttpClient', () => {
     expect(fetchMock.mock.calls[1][1].headers.Authorization).toContain('nc=00000001');
   });
 
+  it('prepends a scheme to a bare ip so fetch gets an absolute url', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(res({
+      status: 200, headers: { 'content-type': 'application/xml' }, body: '<DeviceInfo/>',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const c = new HttpClient({ ip: '192.168.0.196', port: 80, username: 'u', password: 'p' });
+    expect(c.host).toBe('http://192.168.0.196:80');
+    await c.request('GET', '/ISAPI/System/deviceInfo');
+    expect(fetchMock.mock.calls[0][0]).toBe('http://192.168.0.196:80/ISAPI/System/deviceInfo');
+  });
+
+  it('respects an explicit protocol and an already-schemed host', () => {
+    expect(new HttpClient({ ip: '10.0.0.5', protocol: 'https', username: 'u', password: 'p' }).host)
+      .toBe('https://10.0.0.5');
+    expect(new HttpClient({ host: 'http://host:8080', port: 80, username: 'u', password: 'p' }).host)
+      .toBe('http://host:8080');
+  });
+
   it('maps ISAPI fault to DeviceError', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(res({
       status: 200,

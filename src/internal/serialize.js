@@ -9,13 +9,14 @@ export function serialize(obj, format, rootName) {
 
 export function deserialize(text, contentType = '') {
   if (!text) return null;
-  if (/json/i.test(contentType)) return JSON.parse(text);
-  if (/xml/i.test(contentType)) return parseXml(text);
-  // best-effort sniff
   const t = text.trim();
+  // Trust the body shape over the Content-Type header: some Hikvision firmwares
+  // mislabel an XML body as application/json (e.g. deviceInfo?format=json).
+  if (t.startsWith('<')) return parseXml(t);
   if (t.startsWith('{') || t.startsWith('[')) {
     try { return JSON.parse(t); } catch { /* fall through */ }
   }
-  if (t.startsWith('<')) return parseXml(t);
+  if (/json/i.test(contentType)) return JSON.parse(t);
+  if (/xml/i.test(contentType)) return parseXml(t);
   return text;
 }

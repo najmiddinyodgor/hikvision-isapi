@@ -33,4 +33,12 @@ describe('parseXml', () => {
     const obj = parseXml('<ResponseStatus><statusCode>1</statusCode><subStatusCode>ok</subStatusCode></ResponseStatus>');
     expect(obj.ResponseStatus.statusCode).toBe('1');
   });
+  it('parses a root tag with namespace attributes (xmlns URL contains //)', () => {
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+      + '<DeviceInfo version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
+      + '<deviceName>Access Controller</deviceName><model>DS-K1T343MWX</model></DeviceInfo>';
+    const obj = parseXml(xml);
+    expect(obj.DeviceInfo.deviceName).toBe('Access Controller');
+    expect(obj.DeviceInfo.model).toBe('DS-K1T343MWX');
+  });
 });

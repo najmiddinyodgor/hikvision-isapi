@@ -35,8 +35,16 @@ export function parseXml(str) {
     i++; // consume '<'
     let name = '';
     while (i < s.length && !/[\s/>]/.test(s[i])) name += s[i++];
-    // skip attributes
-    while (i < s.length && s[i] !== '>' && s[i] !== '/') i++;
+    // skip attributes (quote-aware: values may contain '/' or '>', e.g. xmlns="http://...")
+    let quote = null;
+    while (i < s.length) {
+      const c = s[i];
+      if (quote) { if (c === quote) quote = null; i++; continue; }
+      if (c === '"' || c === "'") { quote = c; i++; continue; }
+      if (c === '>') break;
+      if (c === '/' && s[i + 1] === '>') break;
+      i++;
+    }
     if (s[i] === '/') { i += 2; return { name, value: null }; } // self-closing
     i++; // consume '>'
     const children = {};

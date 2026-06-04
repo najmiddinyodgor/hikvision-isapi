@@ -6,10 +6,23 @@ function randomCnonce() {
   return Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10);
 }
 
+// Build an absolute base URL from either `host` or `ip`/`protocol`/`port`.
+// A bare host (no scheme) is the cause of the "ip appended to the page URL" bug
+// in browsers: fetch() treats a scheme-less string as a relative path.
+function normalizeHost({ host, ip, protocol, port }) {
+  let base = (host || ip || '').toString().trim().replace(/\/+$/, '');
+  if (!base) throw new Error('HttpClient requires a host or ip');
+  if (!/^https?:\/\//i.test(base)) base = `${protocol || 'http'}://${base}`;
+  // append port only when one is given and the host part has none
+  if (port && !/:\d+$/.test(base.replace(/^https?:\/\//i, '').split('/')[0])) {
+    base += `:${port}`;
+  }
+  return base;
+}
+
 export class HttpClient {
-  constructor({ host, username, password, timeout = 10000, defaultFormat = 'xml' }) {
-    if (!host) throw new Error('HttpClient requires host');
-    this.host = host.replace(/\/$/, '');
+  constructor({ host, ip, protocol, port, username, password, timeout = 10000, defaultFormat = 'xml' }) {
+    this.host = normalizeHost({ host, ip, protocol, port });
     this.username = username;
     this.password = password;
     this.timeout = timeout;
