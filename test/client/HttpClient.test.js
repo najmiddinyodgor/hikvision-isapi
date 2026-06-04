@@ -54,6 +54,35 @@ describe('HttpClient', () => {
     expect(fetchMock.mock.calls[1][1].headers.Authorization).toContain('nc=00000001');
   });
 
+  it('reuses the cached challenge: later requests send digest on the first try', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(res({ status: 401, headers: { 'www-authenticate': 'Digest realm="r", qop="auth", nonce="n", algorithm=MD5' } }))
+      .mockResolvedValueOnce(res({ status: 200, headers: { 'content-type': 'application/xml' }, body: '<A/>' }))
+      .mockResolvedValueOnce(res({ status: 200, headers: { 'content-type': 'application/xml' }, body: '<B/>' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const c = new HttpClient({ host: 'http://host', username: 'u', password: 'p' });
+    await c.request('GET', '/1'); // cold: probe(401) + auth retry = 2 fetches
+    await c.request('GET', '/2'); // warm: single fetch, digest up front
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const second = fetchMock.mock.calls[2][1].headers;
+    expect(second.Authorization).toContain('Digest');
+    expect(second.Authorization).toContain('nc=00000002'); // nonce-count advanced
+  });
+
+  it('re-handshakes when the cached nonce goes stale', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(res({ status: 401, headers: { 'www-authenticate': 'Digest realm="r", qop="auth", nonce="n1"' } }))
+      .mockResolvedValueOnce(res({ status: 200, headers: { 'content-type': 'application/xml' }, body: '<A/>' }))
+      .mockResolvedValueOnce(res({ status: 401, headers: { 'www-authenticate': 'Digest realm="r", qop="auth", nonce="n2"' } }))
+      .mockResolvedValueOnce(res({ status: 200, headers: { 'content-type': 'application/xml' }, body: '<B/>' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const c = new HttpClient({ host: 'http://host', username: 'u', password: 'p' });
+    await c.request('GET', '/1');
+    await c.request('GET', '/2'); // preemptive auth rejected (stale) -> refresh + retry
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[3][1].headers.Authorization).toContain('nc=00000001'); // reset for new nonce
+  });
+
   it('prepends a scheme to a bare ip so fetch gets an absolute url', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(res({
       status: 200, headers: { 'content-type': 'application/xml' }, body: '<DeviceInfo/>',

@@ -27,6 +27,24 @@ export class HttpClient {
     this.password = password;
     this.timeout = timeout;
     this.defaultFormat = defaultFormat;
+    // Cached digest challenge so later requests authenticate on the first try
+    // instead of paying a 401 round-trip (and, in the browser, a CORS preflight)
+    // every single call. `_nc` is the RFC 2617 nonce-count for the cached nonce.
+    this._challenge = null;
+    this._nc = 0;
+  }
+
+  // Build an Authorization header from the cached challenge, advancing the
+  // nonce-count. Returns undefined when no challenge is known yet (cold start).
+  _authHeader(method, path) {
+    if (!this._challenge) return undefined;
+    this._nc += 1;
+    const nc = this._nc.toString(16).padStart(8, '0');
+    return buildAuthHeader({
+      challenge: this._challenge, method, uri: path,
+      username: this.username, password: this.password,
+      nc, cnonce: randomCnonce(),
+    });
   }
 
   async request(method, path, { body, format } = {}) {
@@ -52,34 +70,31 @@ export class HttpClient {
       }).finally(() => clearTimeout(timer));
     };
 
-    let response;
-    try {
-      response = await doFetch();
-    } catch (e) {
+    const send = (authHeader) => doFetch(authHeader).catch((e) => {
       if (e.name === 'AbortError') throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
       throw new RequestError(e.message, { cause: e });
-    }
+    });
 
+    // Authenticate up front with the cached challenge. Only a cold client (no
+    // challenge yet) sends the first request without digest, purely to obtain it.
+    let response = await send(this._authHeader(method, path));
+
+    // A 401 means either the cold-start probe or a stale/rotated nonce. Refresh
+    // the challenge from the response and retry once with a freshly counted auth.
     if (response.status === 401) {
       const wa = response.headers.get('www-authenticate');
-      if (!wa || !/digest/i.test(wa)) throw new AuthError('Unauthorized (no digest challenge)');
+      if (!wa || !/digest/i.test(wa)) { this._challenge = null; throw new AuthError('Unauthorized (no digest challenge)'); }
       const challenge = parseChallenge(wa);
       // drain the challenge response so the socket can be reused (undici)
       try { await response.text(); } catch { /* ignore */ }
-      if (!challenge.nonce || !challenge.realm) throw new AuthError('Malformed digest challenge');
-      const nc = '00000001'; // single handshake per request, against a fresh nonce
-      const authHeader = buildAuthHeader({
-        challenge, method, uri: path,
-        username: this.username, password: this.password,
-        nc, cnonce: randomCnonce(),
-      });
-      try {
-        response = await doFetch(authHeader);
-      } catch (e) {
-        if (e.name === 'AbortError') throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
-        throw new RequestError(e.message, { cause: e });
+      if (!challenge.nonce || !challenge.realm) { this._challenge = null; throw new AuthError('Malformed digest challenge'); }
+      this._challenge = challenge;
+      this._nc = 0;
+      response = await send(this._authHeader(method, path));
+      if (response.status === 401) {
+        this._challenge = null; // drop the bad cache so the next call re-handshakes
+        throw new AuthError('Authentication failed (bad credentials)');
       }
-      if (response.status === 401) throw new AuthError('Authentication failed (bad credentials)');
     }
 
     const text = await response.text();
