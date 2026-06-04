@@ -4,14 +4,19 @@ import { FaceService } from '../../src/services/FaceService.js';
 const fake = (impl) => ({ request: vi.fn(impl) });
 
 describe('FaceService', () => {
-  it('upload posts face record to FDLib', async () => {
+  it('upload PUTs a multipart FDSetUp with FaceDataRecord + img parts', async () => {
     const http = fake(async () => ({ ResponseStatus: { statusCode: '1' } }));
-    await new FaceService(http).upload('EMP001', 'BASE64DATA', '1');
+    // 'AAA' is valid base64 -> 2 bytes
+    await new FaceService(http).upload('EMP001', 'AAA=', '1');
     const [method, path, opts] = http.request.mock.calls[0];
-    expect(method).toBe('POST');
-    expect(path).toContain('/ISAPI/Intelligent/FDLib/FDSetUp?format=json');
-    expect(opts.body.FaceDataRecord.FPID).toBe('EMP001');
-    expect(opts.body.FaceDataRecord.faceData).toBe('BASE64DATA');
+    expect(method).toBe('PUT');
+    expect(path).toContain('/ISAPI/Intelligent/FDLib/FDSetUp?format=json&FDID=1&faceLibType=blackFD');
+    expect(opts.body).toBeInstanceOf(FormData);
+    expect(opts.body.has('FaceDataRecord')).toBe(true);
+    expect(opts.body.has('img')).toBe(true);
+    const meta = JSON.parse(await opts.body.get('FaceDataRecord').text());
+    expect(meta.FPID).toBe('EMP001');
+    expect(meta.faceLibType).toBe('blackFD');
   });
   it('getFaceLibs lists libraries', async () => {
     const http = fake(async () => ({ FDLibList: { FDLib: [{ FDID: '1' }] } }));

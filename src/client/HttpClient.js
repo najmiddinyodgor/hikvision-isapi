@@ -51,14 +51,17 @@ export class HttpClient {
     const fmt = format || this.defaultFormat;
     const url = this.host + path;
     let payload;
-    if (body !== undefined) {
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (isForm) {
+      payload = { body, contentType: null }; // let fetch set the multipart boundary
+    } else if (body !== undefined) {
       const rootName = Object.keys(body)[0];
       payload = serialize(body, fmt, rootName);
     }
 
     const doFetch = (authHeader) => {
       const headers = { Accept: fmt === 'json' ? 'application/json' : 'application/xml' };
-      if (payload) headers['Content-Type'] = payload.contentType;
+      if (payload && payload.contentType) headers['Content-Type'] = payload.contentType;
       if (authHeader) headers.Authorization = authHeader;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeout);
