@@ -14,7 +14,6 @@ export class HttpClient {
     this.password = password;
     this.timeout = timeout;
     this.defaultFormat = defaultFormat;
-    this._nc = 0;
   }
 
   async request(method, path, { body, format } = {}) {
@@ -52,8 +51,10 @@ export class HttpClient {
       const wa = response.headers.get('www-authenticate');
       if (!wa || !/digest/i.test(wa)) throw new AuthError('Unauthorized (no digest challenge)');
       const challenge = parseChallenge(wa);
-      this._nc += 1;
-      const nc = String(this._nc).padStart(8, '0');
+      // drain the challenge response so the socket can be reused (undici)
+      try { await response.text(); } catch { /* ignore */ }
+      if (!challenge.nonce || !challenge.realm) throw new AuthError('Malformed digest challenge');
+      const nc = '00000001'; // single handshake per request, against a fresh nonce
       const authHeader = buildAuthHeader({
         challenge, method, uri: path,
         username: this.username, password: this.password,

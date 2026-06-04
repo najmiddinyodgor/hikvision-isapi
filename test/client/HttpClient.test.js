@@ -44,6 +44,16 @@ describe('HttpClient', () => {
     await expect(c.request('GET', '/x')).rejects.toBeInstanceOf(AuthError);
   });
 
+  it('uses nc=00000001 on the digest retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(res({ status: 401, headers: { 'www-authenticate': 'Digest realm="r", qop="auth", nonce="n", algorithm=MD5' } }))
+      .mockResolvedValueOnce(res({ status: 200, headers: { 'content-type': 'application/xml' }, body: '<DeviceInfo/>' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const c = new HttpClient({ host: 'http://host', username: 'u', password: 'p' });
+    await c.request('GET', '/x');
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toContain('nc=00000001');
+  });
+
   it('maps ISAPI fault to DeviceError', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(res({
       status: 200,
