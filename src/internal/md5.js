@@ -1,4 +1,4 @@
-// Pure-JS MD5 (public domain, blueimp-md5 core). Returns lowercase hex.
+// Pure-JS MD5. Source: https://github.com/blueimp/JavaScript-MD5 (MIT / public domain). Returns lowercase hex.
 function safeAdd(x, y) {
   const lsw = (x & 0xffff) + (y & 0xffff);
   const msw = (x >> 16) + (y >> 16) + (lsw >> 16);

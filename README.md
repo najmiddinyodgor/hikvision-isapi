@@ -84,9 +84,12 @@ import { UserType, EventType } from 'hikvision-isapi';
 
 UserType.NORMAL     // 'normal'
 UserType.VISITOR    // 'visitor'
-UserType.BLACKLIST  // 'blackList'
+UserType.BLOCKLIST  // 'blackList'
 
-EventType.ACCESS    // 'AccessControllerEvent'
+EventType.AUTHENTICATION  // 'authentication'
+EventType.FACE_MATCH      // 'faceMatch'
+EventType.DOOR_OPEN       // 'doorOpen'
+EventType.ACCESS          // 'AccessControllerEvent'
 ```
 
 ## Configuration

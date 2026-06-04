@@ -10,8 +10,8 @@ describe('FaceService', () => {
     const [method, path, opts] = http.request.mock.calls[0];
     expect(method).toBe('POST');
     expect(path).toContain('/ISAPI/Intelligent/FDLib/FDSetUp?format=json');
-    expect(opts.body.FaceInfo.employeeNo).toBe('EMP001');
-    expect(opts.body.FaceInfo.faceData).toBe('BASE64DATA');
+    expect(opts.body.FaceDataRecord.FPID).toBe('EMP001');
+    expect(opts.body.FaceDataRecord.faceData).toBe('BASE64DATA');
   });
   it('getFaceLibs lists libraries', async () => {
     const http = fake(async () => ({ FDLibList: { FDLib: [{ FDID: '1' }] } }));

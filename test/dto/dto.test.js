@@ -33,7 +33,7 @@ describe('Face', () => {
   it('toISAPI includes faceLibId and image', () => {
     const f = Face({ employeeNo: 'EMP001', faceLibId: '1', imageBase64: 'AAA' });
     const body = f.toISAPI();
-    expect(body.FaceInfo.employeeNo).toBe('EMP001');
-    expect(body.FaceInfo.faceLibId).toBe('1');
+    expect(body.FaceDataRecord.FPID).toBe('EMP001');
+    expect(body.FaceDataRecord.FDID).toBe('1');
   });
 });
