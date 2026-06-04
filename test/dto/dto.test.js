@@ -16,6 +16,21 @@ describe('Person', () => {
     expect(body.UserInfo.name).toBe('John');
     expect(body.UserInfo.userType).toBe('normal');
   });
+  it('always emits a Valid block so UserInfo/Record is not rejected with 400', () => {
+    const body = Person({ employeeNo: 'EMP001', name: 'John' }).toISAPI();
+    expect(body.UserInfo.Valid).toBeDefined();
+    expect(body.UserInfo.Valid.enable).toBe(true);
+    expect(body.UserInfo.Valid.timeType).toBe('local');
+    expect(body.UserInfo.Valid.beginTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(body.UserInfo.Valid.endTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+  it('lets the caller override the validity window', () => {
+    const body = Person({
+      employeeNo: '1', name: 'J', validBegin: '2025-01-01T00:00:00', validEnd: '2026-01-01T00:00:00',
+    }).toISAPI();
+    expect(body.UserInfo.Valid.beginTime).toBe('2025-01-01T00:00:00');
+    expect(body.UserInfo.Valid.endTime).toBe('2026-01-01T00:00:00');
+  });
   it('fromISAPI reads UserInfo', () => {
     const p = Person.fromISAPI({ UserInfo: { employeeNo: 'EMP001', name: 'John' } });
     expect(p.employeeNo).toBe('EMP001');
