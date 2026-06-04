@@ -10,12 +10,14 @@
   "jsdelivr": "./dist/hikvision-isapi.umd.min.js",
   "exports": {
     ".": {
+      "browser": "./dist/hikvision-isapi.umd.js",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "browser": "./dist/hikvision-isapi.umd.js"
+      "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
@@ -24,6 +26,7 @@
   "license": "MIT",
   "devDependencies": {
     "tsup": "^8.0.0",
+    "typescript": "^6.0.3",
     "vitest": "^1.6.0"
   }
 }
