@@ -40,7 +40,7 @@ import https from 'node:https';
 
 const PORT = Number(process.env.PORT || 8787);
 const SCHEME = (process.env.HIK_SCHEME || 'http').toLowerCase();
-const TIMEOUT = Number(process.env.HIK_TIMEOUT || 30000);
+const TIMEOUT = Number(process.env.HIK_TIMEOUT || 160000);
 const ALLOW = (process.env.HIK_ALLOW || '')
   .split(',')
   .map((s) => s.trim())

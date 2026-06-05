@@ -8,6 +8,49 @@ function base64ToBytes(b64) {
   return out;
 }
 
+// Hikvision FDLib closes the TCP connection (no HTTP response) when a face image
+// is too large in pixels/bytes, which surfaces as an opaque "fetch failed". To
+// stay safely under that limit we downscale before upload. Resizing needs a
+// canvas, which only exists in browsers; in Node we leave the bytes untouched
+// (callers there are expected to pass a reasonably sized image).
+const MAX_DIM = 1024; // longest edge, px
+const MAX_BYTES = 150 * 1024; // target encoded size
+
+function canResize() {
+  return typeof createImageBitmap === 'function'
+    && (typeof OffscreenCanvas !== 'undefined' || typeof document !== 'undefined');
+}
+
+async function downscaleJpeg(bytes, { maxDim = MAX_DIM, maxBytes = MAX_BYTES } = {}) {
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+  const { width, height } = bitmap;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  const w = Math.max(1, Math.round(width * scale));
+  const h = Math.max(1, Math.round(height * scale));
+
+  let canvas;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    canvas = new OffscreenCanvas(w, h);
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+  }
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  if (bitmap.close) bitmap.close();
+
+  const toBlob = (q) => (canvas.convertToBlob
+    ? canvas.convertToBlob({ type: 'image/jpeg', quality: q })
+    : new Promise((res) => canvas.toBlob(res, 'image/jpeg', q)));
+
+  let out = bytes;
+  for (let q = 0.85; q >= 0.45; q -= 0.15) {
+    const blob = await toBlob(q); // eslint-disable-line no-await-in-loop
+    out = new Uint8Array(await blob.arrayBuffer()); // eslint-disable-line no-await-in-loop
+    if (out.length <= maxBytes) break;
+  }
+  return out;
+}
+
 export class FaceService {
   constructor(http) { this.http = http; }
 
@@ -15,10 +58,14 @@ export class FaceService {
     // FDSetUp adds a face via PUT multipart/form-data: a JSON "FaceDataRecord"
     // part plus the binary image as "img". (POST or base64-in-JSON are rejected
     // with "method and protocol do not match".)
+    let bytes = base64ToBytes(imageBase64);
+    if (bytes.length > MAX_BYTES && canResize()) {
+      try { bytes = await downscaleJpeg(bytes); } catch { /* fall back to original */ }
+    }
     const meta = JSON.stringify({ faceLibType, FDID: String(faceLibId), FPID: String(employeeNo) });
     const form = new FormData();
     form.append('FaceDataRecord', new Blob([meta], { type: 'application/json' }));
-    form.append('img', new Blob([base64ToBytes(imageBase64)], { type: 'image/jpeg' }), 'face.jpg');
+    form.append('img', new Blob([bytes], { type: 'image/jpeg' }), 'face.jpg');
     return this.http.request(
       'PUT',
       `/ISAPI/Intelligent/FDLib/FDSetUp?format=json&FDID=${faceLibId}&faceLibType=${faceLibType}`,

@@ -18,6 +18,16 @@ describe('FaceService', () => {
     expect(meta.FPID).toBe('EMP001');
     expect(meta.faceLibType).toBe('blackFD');
   });
+  it('leaves the image untouched where no canvas exists (Node)', async () => {
+    // 200 KB of base64 -> ~150 KB bytes; without createImageBitmap (Node) the
+    // resize is skipped and the original bytes are sent as-is.
+    const big = 'A'.repeat(200 * 1024);
+    const http = fake(async () => ({ ResponseStatus: { statusCode: '1' } }));
+    await new FaceService(http).upload('EMP001', big, '1');
+    const form = http.request.mock.calls[0][2].body;
+    const imgBytes = (await form.get('img').arrayBuffer()).byteLength;
+    expect(imgBytes).toBe(Math.floor((big.length / 4) * 3)); // base64 -> byte length
+  });
   it('getFaceLibs lists libraries', async () => {
     const http = fake(async () => ({ FDLibList: { FDLib: [{ FDID: '1' }] } }));
     const out = await new FaceService(http).getFaceLibs();

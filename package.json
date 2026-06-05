@@ -1,6 +1,6 @@
 {
   "name": "hikvision-isapi",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Isomorphic zero-dependency Hikvision ISAPI client for Node.js and browsers",
   "type": "module",
   "main": "./dist/index.cjs",

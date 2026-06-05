@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpClient } from '../../src/client/HttpClient.js';
-import { AuthError, DeviceError } from '../../src/errors/index.js';
+import { AuthError, DeviceError, RequestError } from '../../src/errors/index.js';
 
 function res({ status = 200, headers = {}, body = '' }) {
   return {
@@ -99,6 +99,19 @@ describe('HttpClient', () => {
       .toBe('https://10.0.0.5');
     expect(new HttpClient({ host: 'http://host:8080', port: 80, username: 'u', password: 'p' }).host)
       .toBe('http://host:8080');
+  });
+
+  it('maps a device socket-close to an actionable RequestError', async () => {
+    const sockErr = Object.assign(new TypeError('fetch failed'), {
+      cause: Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' }),
+    });
+    const fetchMock = vi.fn().mockRejectedValueOnce(sockErr);
+    vi.stubGlobal('fetch', fetchMock);
+    const c = new HttpClient({ host: 'http://host', username: 'u', password: 'p' });
+    await expect(c.request('PUT', '/x', { body: { A: {} } })).rejects.toMatchObject({
+      constructor: RequestError,
+      message: expect.stringContaining('too large'),
+    });
   });
 
   it('maps ISAPI fault to DeviceError', async () => {

@@ -75,6 +75,16 @@ export class HttpClient {
 
     const send = (authHeader) => doFetch(authHeader).catch((e) => {
       if (e.name === 'AbortError') throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
+      // The device closes the socket (no HTTP response) when a request body is
+      // too large — e.g. an oversized face image. fetch reports this as a generic
+      // "fetch failed" / UND_ERR_SOCKET; surface an actionable message instead.
+      const code = e.cause && e.cause.code;
+      if (code === 'UND_ERR_SOCKET' || /other side closed|socket hang up/i.test(e.cause?.message || '')) {
+        throw new RequestError(
+          'Connection closed by device (no response). The request body may be too large — for face uploads, downscale the image.',
+          { cause: e },
+        );
+      }
       throw new RequestError(e.message, { cause: e });
     });
 
