@@ -10,19 +10,35 @@ export function Person(input) {
     endTime: input.validEnd || '2037-12-31T23:59:59',
     timeType: 'local',
   };
+  // Department maps to the firmware's integer `groupId` (1..128; 0 = none).
+  // Accept it via `department` or `groupId`; both are coerced to an integer.
+  const rawGroup = input.groupId != null ? input.groupId : input.department;
+  const groupId = rawGroup != null && rawGroup !== '' && !Number.isNaN(Number(rawGroup))
+    ? Number(rawGroup) : undefined;
+
   const data = {
     employeeNo: String(input.employeeNo),
     name: input.name,
     userType: input.userType || 'normal',
     Valid: valid,
     ...(input.gender ? { gender: input.gender } : {}),
+    ...(groupId !== undefined ? { groupId } : {}),
   };
   return {
     ...data,
+    ...(groupId !== undefined ? { department: groupId } : {}),
     toISAPI() { return { UserInfo: data }; },
   };
 }
 Person.fromISAPI = function (obj) {
   const u = (obj && obj.UserInfo) || obj || {};
-  return Person({ employeeNo: u.employeeNo, name: u.name, userType: u.userType });
+  // groupId 0 means "no department"; surface it as undefined.
+  const groupId = u.groupId ? Number(u.groupId) : undefined;
+  return Person({
+    employeeNo: u.employeeNo,
+    name: u.name,
+    userType: u.userType,
+    ...(u.gender ? { gender: u.gender } : {}),
+    ...(groupId !== undefined ? { groupId } : {}),
+  });
 };

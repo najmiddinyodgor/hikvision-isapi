@@ -1,6 +1,7 @@
 import { HttpClient } from './HttpClient.js';
 import { DeviceService } from '../services/DeviceService.js';
 import { PersonService } from '../services/PersonService.js';
+import { DepartmentService } from '../services/DepartmentService.js';
 import { CardService } from '../services/CardService.js';
 import { FaceService } from '../services/FaceService.js';
 import { FingerprintService } from '../services/FingerprintService.js';
@@ -13,6 +14,7 @@ export class HikvisionClient {
     this.http = new HttpClient(config);
     this.device = new DeviceService(this.http);
     this.person = new PersonService(this.http);
+    this.department = new DepartmentService(this.http);
     this.card = new CardService(this.http);
     this.face = new FaceService(this.http);
     this.fingerprint = new FingerprintService(this.http);

@@ -35,6 +35,25 @@ describe('Person', () => {
     const p = Person.fromISAPI({ UserInfo: { employeeNo: 'EMP001', name: 'John' } });
     expect(p.employeeNo).toBe('EMP001');
   });
+  it('maps department to the integer groupId', () => {
+    const body = Person({ employeeNo: '1', name: 'J', department: '5' }).toISAPI();
+    expect(body.UserInfo.groupId).toBe(5);
+  });
+  it('accepts groupId directly', () => {
+    const body = Person({ employeeNo: '1', name: 'J', groupId: 3 }).toISAPI();
+    expect(body.UserInfo.groupId).toBe(3);
+  });
+  it('omits groupId when no department is given', () => {
+    const body = Person({ employeeNo: '1', name: 'J' }).toISAPI();
+    expect(body.UserInfo.groupId).toBeUndefined();
+  });
+  it('fromISAPI reads department (groupId) and gender back; groupId 0 => none', () => {
+    const p = Person.fromISAPI({ UserInfo: { employeeNo: '1', name: 'J', gender: 'male', groupId: 5 } });
+    expect(p.department).toBe(5);
+    expect(p.gender).toBe('male');
+    const none = Person.fromISAPI({ UserInfo: { employeeNo: '2', name: 'K', groupId: 0 } });
+    expect(none.department).toBeUndefined();
+  });
 });
 
 describe('Card', () => {
