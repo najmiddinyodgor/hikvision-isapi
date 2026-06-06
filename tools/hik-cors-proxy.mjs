@@ -41,10 +41,6 @@ import https from 'node:https';
 const PORT = Number(process.env.PORT || 8787);
 const SCHEME = (process.env.HIK_SCHEME || 'http').toLowerCase();
 const TIMEOUT = Number(process.env.HIK_TIMEOUT || 160000);
-const ALLOW = (process.env.HIK_ALLOW || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
 
 const upstream = SCHEME === 'https' ? https : http;
 
@@ -65,12 +61,6 @@ function setCors(res, reqOrigin) {
   // The digest handshake lives in the browser, so it MUST be able to read the
   // challenge header off the 401 response.
   res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate');
-}
-
-function isAllowed(hostWithPort) {
-  if (ALLOW.length === 0) return true; // open mode (trusted LAN only)
-  const hostOnly = hostWithPort.split(':')[0];
-  return ALLOW.includes(hostWithPort) || ALLOW.includes(hostOnly);
 }
 
 const server = http.createServer((req, res) => {
@@ -94,12 +84,6 @@ const server = http.createServer((req, res) => {
     setCors(res, origin);
     res.writeHead(400, { 'Content-Type': 'text/plain' });
     res.end('Bad request: expected /<deviceHost>/<path>, e.g. /192.168.0.101/ISAPI/System/deviceInfo');
-    return;
-  }
-  if (!isAllowed(target)) {
-    setCors(res, origin);
-    res.writeHead(403, { 'Content-Type': 'text/plain' });
-    res.end(`Forbidden: ${target} is not in HIK_ALLOW`);
     return;
   }
 
@@ -148,6 +132,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`hik-cors-proxy listening on http://localhost:${PORT}`);
   console.log(`  upstream scheme : ${SCHEME}`);
-  console.log(`  allowlist       : ${ALLOW.length ? ALLOW.join(', ') : '(open — any host)'}`);
   console.log(`  example         : http://localhost:${PORT}/192.168.0.101/ISAPI/System/deviceInfo`);
 });
