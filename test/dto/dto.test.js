@@ -35,6 +35,17 @@ describe('Person', () => {
     const p = Person.fromISAPI({ UserInfo: { employeeNo: 'EMP001', name: 'John' } });
     expect(p.employeeNo).toBe('EMP001');
   });
+  it('grants door access by default so enrolled persons can authenticate', () => {
+    const body = Person({ employeeNo: '1', name: 'J' }).toISAPI();
+    expect(body.UserInfo.doorRight).toBe('1');
+    expect(body.UserInfo.RightPlan).toEqual([{ doorNo: 1, planTemplateNo: '1' }]);
+  });
+  it('lets the caller override door rights', () => {
+    const body = Person({
+      employeeNo: '1', name: 'J', doorRight: '1', RightPlan: [{ doorNo: 2, planTemplateNo: '3' }],
+    }).toISAPI();
+    expect(body.UserInfo.RightPlan).toEqual([{ doorNo: 2, planTemplateNo: '3' }]);
+  });
   it('maps department to the integer groupId', () => {
     const body = Person({ employeeNo: '1', name: 'J', department: '5' }).toISAPI();
     expect(body.UserInfo.groupId).toBe(5);

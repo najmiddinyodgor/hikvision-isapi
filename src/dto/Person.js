@@ -16,13 +16,27 @@ export function Person(input) {
   const groupId = rawGroup != null && rawGroup !== '' && !Number.isNaN(Number(rawGroup))
     ? Number(rawGroup) : undefined;
 
+  // Door access rights. Without these the person is enrolled but has no
+  // permission to open any door, so every verification at the terminal is
+  // denied — what looks like "authentication failure". These mirror what the
+  // Hikvision web UI sends; all are overridable.
+  const doorRight = input.doorRight != null ? String(input.doorRight) : '1';
+  const rightPlan = input.RightPlan || [{ doorNo: 1, planTemplateNo: '1' }];
+
   const data = {
     employeeNo: String(input.employeeNo),
     name: input.name,
     userType: input.userType || 'normal',
     Valid: valid,
+    doorRight,
+    RightPlan: rightPlan,
     ...(input.gender ? { gender: input.gender } : {}),
     ...(groupId !== undefined ? { groupId } : {}),
+    localUIRight: input.localUIRight != null ? input.localUIRight : false,
+    userVerifyMode: input.userVerifyMode != null ? input.userVerifyMode : '',
+    password: input.password != null ? String(input.password) : '',
+    closeDelayEnabled: input.closeDelayEnabled != null ? input.closeDelayEnabled : false,
+    onlyVerify: input.onlyVerify != null ? input.onlyVerify : false,
   };
   return {
     ...data,
