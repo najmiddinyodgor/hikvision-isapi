@@ -38,6 +38,11 @@
 import http from 'node:http';
 import https from 'node:https';
 
+// Hikvision devices ship self-signed certs with IP-mismatched CNs. Disable TLS
+// verification globally so no untrusted-certificate error can ever bubble up,
+// whichever code path (default agent, redirect, leaf-signature check) hits it.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const PORT = Number(process.env.PORT || 8787);
 const SCHEME = (process.env.HIK_SCHEME || 'http').toLowerCase();
 const TIMEOUT = Number(process.env.HIK_TIMEOUT || 160000);
@@ -103,8 +108,10 @@ const server = http.createServer((req, res) => {
     path: targetPath,
     headers: fwdHeaders,
     timeout: TIMEOUT,
-    // Hikvision devices ship self-signed certs; don't reject them on https.
+    // Hikvision devices ship self-signed certs; accept them and skip hostname
+    // (CN/SAN) verification so an IP-mismatched cert doesn't throw either.
     rejectUnauthorized: false,
+    checkServerIdentity: () => undefined,
   };
 
   const proxyReq = upstream.request(options, (proxyRes) => {
