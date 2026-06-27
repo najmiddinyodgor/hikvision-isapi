@@ -9,4 +9,4 @@ export { EventType } from './enums/EventType.js';
 export {
   HikvisionError, AuthError, RequestError, DeviceError, TimeoutError,
 } from './errors/index.js';
-export const VERSION = '0.1.9';
+export const VERSION = '0.1.10';
