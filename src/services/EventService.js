@@ -3,14 +3,14 @@ const JSON_FMT = { format: 'json' };
 export class EventService {
   constructor(http) { this.http = http; }
 
-  async search({ startTime, endTime, position = 0, maxResults = 30, employeeNo } = {}) {
+  async search({ startTime, endTime, position = 0, maxResults = 30, major = 0, minor = 0, employeeNo, } = {}) {
     const body = {
       AcsEventCond: {
         searchID: String(Date.now()),
         searchResultPosition: position,
         maxResults,
-        major: 0,
-        minor: 0,
+        major,
+        minor,
         ...(startTime ? { startTime } : {}),
         ...(endTime ? { endTime } : {}),
         ...(employeeNo ? { employeeNoString: String(employeeNo) } : {}),
